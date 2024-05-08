@@ -1,0 +1,114 @@
+---
+title: "STAT 380 Lecture 20 - Random Forests Part 2"
+output: html_document
+date: "April 17, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+#Remove all objects from Environment
+remove(list = ls())
+
+#Load packages
+library(tidyverse)
+library(randomForest) #For Random Forest
+
+# Read in Dataset
+titanic <- read.csv("L12_titanic3.csv")
+```
+
+## Example 1 - Random Forest in R using Titanic Data
+#### Part a - Prepare the data by performing an 80/20 training/validation split using a seed of 123. 
+```{r}
+#Perform an 80/20 training/validation split
+set.seed(123)
+trainInd <- sample(1:nrow(titanic), floor(0.8 * nrow(titanic)))
+set.seed(NULL)
+
+Train <- titanic[trainInd, ]
+Validation <- titanic[-trainInd, ]
+```
+
+#### Part b - Build a random forest for predicting whether a person survives based on the other variables in the dataset. The forest should consist of 500 trees. Each time a split is considered, use 3 variables. 
+```{r, error = TRUE}
+rfModel <- randomForest(Survived ~ ., data = Train, ntree = 500, mtry = 3)
+```
+
+#### Part c - Fix the code to eliminate the error message and train the model.
+```{r}
+rfModel <- randomForest(as.factor(Survived) ~ ., data = Train, ntree = 500, mtry = 3)
+```
+
+#### Part d - Find the probabilities of survival for the first 6 passengers in the validation set. Are you getting the same values?
+```{r}
+#Obtain Predicted Probabilities
+predProb <- predict(rfModel, newdata = Validation, type = "prob")
+
+#Display Predicted Probabilities for first 6 passengers
+head(predProb)
+```
+
+- The probabilities may differ from what is shown on the handout. Also, if you rerun the code, the probabilities may change.
+
+- In random forest, there is randomness involved each time we build a tree since we have to select a bootstrap sample. If mtry is less than p (number of variables in dataset), there is also a random selection of mtry variables each time we consider making a split.
+
+- To get reproducible results, use a seed.
+
+
+#### Part e - Using a seed of 123 for constructing the forest, report the confusion matrix for the validation data and the overall accuracy of the method.
+
+```{r}
+#Build model using a seed of 123
+set.seed(123)
+rfModel <- randomForest(as.factor(Survived) ~ ., 
+                        data = Train, 
+                        ntree = 500, 
+                        mtry = 3)
+set.seed(NULL)
+
+#Obtain predicted probabilities - not needed for confusion matrix but included to show we all get same probabilities when using the same seed
+predProb <- predict(rfModel, newdata = Validation, type = "prob")
+head(predProb)
+
+#To create the confusion matrix, we need to determine which class (No or Yes) is more likely. Although we could define a threshold and compare probabilities as we have done in the past, things are more challenging if y has more than 2 classes. So, let R pick for us.
+predSurv <- predict(rfModel, newdata = Validation, type = "response")
+  
+#Create confusion matrix
+table(predSurv, Validation$Survived)
+
+#Calculate accuracy
+mean(Validation$Survived == predSurv)
+```
+
+
+## Example 2 - Random Forest Variable Importance
+#### Part a - Generate the variable importance values. 
+```{r}
+#Build a random forest classifier using a seed of 123 and generate the variable importance values
+set.seed(123)
+rfModel <- randomForest(as.factor(Survived) ~ ., 
+                        data = Train, 
+                        ntree = 500, 
+                        mtry = 3,
+                        importance = TRUE)
+set.seed(NULL)
+```
+
+#### Part b - Extract the variable importance values
+```{r}
+#Extract the importance values from the randomForest model object
+rfModel$importance
+```
+
+
+#### Part c - Plot the variable importance values using the varImpPlot() function from the randomForest package.  
+```{r}
+#Plot the Variable Importance Values
+varImpPlot(rfModel, n.var = 6)
+```
+
+

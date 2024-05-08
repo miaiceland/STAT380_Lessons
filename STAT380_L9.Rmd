@@ -1,0 +1,218 @@
+---
+title: "STAT380 Lecture 9 - Picking k in kNN "
+output: html_document
+date: "September 29, 2023"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+remove(list = ls())
+#Load Libraries
+library(tidyverse)
+library(FNN) #Use FNN for knn regression
+
+#Read Data
+bmd <- read.csv("L08_bmd.csv")
+```
+
+## Example 1a - Read in, prep data, do split (copied from L8)
+```{r}
+#Create Indictor(s) for Medication
+bmd <- bmd %>%
+        mutate(Anti = ifelse(medication == "Anticonvulsant", 1, 0),
+               Gluc = ifelse(medication == "Glucocorticoids", 1, 0))
+
+#Scale my numeric variables
+xvars <- c("age", "weight_kg", "Anti", "Gluc")
+bmd[ , xvars] <- scale(bmd[ , xvars], center = TRUE, scale = TRUE)
+
+#Training/Testing split
+set.seed(123)
+trainInd <- sample(1:nrow(bmd), floor(0.85 * nrow(bmd)))
+set.seed(NULL)
+
+Train <- bmd[trainInd, ]
+Validation <- bmd[-trainInd, ]
+```
+
+## Example 1a - Loop for picking k
+```{r}
+#Initialize
+maxK <- 75
+mseVec <- rep(NA, maxK)
+rmseVec <- rep(NA, maxK)
+
+#Loop
+for(i in 1:maxK){
+  #Build Model
+  knnRes <- knn.reg(train = Train[ , xvars, drop = FALSE],
+                   test = Validation[ , xvars, drop = FALSE],
+                   y = Train$bmd,
+                   k = i)
+
+#calculate and store mse
+mseVec[i] <- mean((Validation$bmd - knnRes$pred)^2)
+
+#calculate and store rmse
+rmseVec[i] <- sqrt(mseVec[i])
+
+}
+```
+
+
+## Example 1b - Create Plot showing MSE as a function of k
+```{r}
+#create a temp DF for plotting in ggplot
+tempDF <- data.frame(k = 1: maxK, mse = mseVec, rmse = rmseVec)
+
+#Create plot
+ggplot(data = tempDF, mapping = aes(x = k, y = rmse)) +
+  geom_line() +
+  labs(y = "Root Mean Squared Error",
+       x = "Number of Nearest Neighbors (k)") +
+  geom_point(data = tempDF[which.min(tempDF$rmse), ], aes(x = k, y = rmse), color = "red")
+
+#find the minimum rmse value
+which.min(rmseVec) #this determines the index of the min
+min(rmseVec)
+```
+
+
+## Example 1c - New seed
+```{r}
+#Could start all over but indicators and scaling not affected by switching seed
+
+#Training/Validation split
+set.seed(1234)
+trainInd <- sample(1:nrow(bmd), floor(0.85 * nrow(bmd)))
+set.seed(NULL)
+
+Train <- bmd[trainInd, ]
+Validation <- bmd[-trainInd, ]
+
+#Initialize
+maxK <- 75
+mseVec <- rep(NA, maxK)
+rmseVec <- rep(NA, maxK)
+
+#Loop
+for(i in 1:maxK){
+  #Build Model
+  knnRes <- knn.reg(train = Train[ , xvars, drop = FALSE],
+                   test = Validation[ , xvars, drop = FALSE],
+                   y = Train$bmd,
+                   k = i)
+  
+  #Find MSE
+  mseVec[i] <- mean((Validation$bmd - knnRes$pred)^2)
+  
+  #Find RMSE
+  rmseVec[i] <- sqrt(mseVec[i])
+}
+
+
+#Create storage data frame so we can use ggplot
+tempDF2 <- data.frame(k = 1:maxK, mse = mseVec, rmse = rmseVec)
+
+#Create plot
+ggplot(data = tempDF2, mapping = aes(x = k, y = rmse)) +
+  geom_line() +
+  labs(y = "Root Mean Squared Error",
+       x = "Number of Nearest Neighbors (k)")
+
+#Finding the minimum RMSE
+which.min(rmseVec)
+
+#Showing the minimum RMSE
+rmseVec[which.min(rmseVec)]
+```
+
+
+## Example 1d
+```{r}
+tempDF$seed <- "123"
+tempDF2$seed <- "1234"
+tempDF3 <- rbind(tempDF, tempDF2)
+
+#Create plot
+ggplot(data = tempDF3, mapping = aes(x = k, y = rmse, linetype = seed)) +
+  geom_line() +
+  labs(y = "Root Mean Square Error",
+       x = "Number of Nearest Neighbors (k)",
+       linetype = "Seed")
+```
+
+```{r}
+#Entire Code
+
+#Create Indictor(s) for Medication
+bmd <- bmd %>%
+        mutate(Anti = ifelse(medication == "Anticonvulsant", 1, 0),
+               Gluc = ifelse(medication == "Glucocorticoids", 1, 0))
+
+#Scale my numeric variables
+xvars <- c("age", "weight_kg", "Anti", "Gluc")
+bmd[ , xvars] <- scale(bmd[ , xvars], center = TRUE, scale = TRUE)
+
+#Training/Testing split
+set.seed(123)
+trainInd <- sample(1:nrow(bmd), floor(0.85 * nrow(bmd)))
+set.seed(NULL)
+
+Train <- bmd[trainInd, ]
+Validation <- bmd[-trainInd, ]
+
+#Initialize
+maxK <- 75
+mseVec <- rep(NA, maxK)
+rmseVec <- rep(NA, maxK)
+
+#Loop
+for(i in 1:maxK){
+  #Build Model
+  knnRes <- knn.reg(train = Train[ , xvars, drop = FALSE],
+                   test = Validation[ , xvars, drop = FALSE],
+                   y = Train$bmd,
+                   k = i)
+}
+
+#calculate and store mse
+mseVec[i] <- mean((Validation$bmd - knnRes$pred)^2)
+
+#calculate and store rmse
+rmseVec[i] <- sqrt(mseVec[i])
+
+#create a temp DF for plotting in ggplot
+tempDF <- data.frame(k = 1: maxK, mse = mseVec, rmse = rmseVec)
+
+#Create plot
+ggplot(data = tempDF, mapping = aes(x = k, y = rmse)) +
+  geom_line() +
+  labs(y = "Root Mean Squared Error",
+       x = "Number of Nearest Neighbors (k)") +
+  geom_point(data = tempDF[which.min(tempDF$rmse), ], aes(x = k, y = rmse), color = "red")
+
+#find the minimum rmse value
+which.min(rmseVec) #this determines the index of the min
+min(rmseVec)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

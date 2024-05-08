@@ -1,0 +1,125 @@
+---
+title: "STAT 380 Lecture 2 Notes"
+author: Your name
+date: January 17, 2024
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+#Remove all Objects in the Environment
+remove(list = ls()) #only if you want to delete everything in your environment
+
+#Load necessary libraries
+library(tidyverse)
+library(palmerpenguins)
+
+#Create a copy of the penguins dataset in the Environment
+data(penguins)
+
+#Read in kc housing data
+kc <- read.csv("kc1000v5.csv")
+
+#Example 5 data set
+L2_insurance_dataset <- read.csv("L02_Insurance_m.csv")
+```
+
+## Example 1 - Supporting data visualization with numerical summaries
+#### Example 1 - Incorrect code
+```{r}
+penguins %>%
+  group_by(species) %>%
+  summarize(N = n(),
+            MeanMass = mean(body_mass_g),
+            MedianMass = median(body_mass_g),
+            StdDevMass = sd(body_mass_g))
+```
+
+#### Example 1 - Corrected code
+```{r}
+penguins %>%
+  group_by(species) %>%
+  summarize(N = n(),
+            MeanMass = mean(body_mass_g, na.rm = TRUE),
+            MedianMass = median(body_mass_g, na.rm = TRUE),
+            StdDevMass = sd(body_mass_g, na.rm = TRUE))
+```
+
+## Example 2 - Alternative method for finding the summary statistics
+```{r}
+#Alternative Method
+
+#Create dataset for each species and calculate values; repeat for each species
+df1 <- filter(penguins, species == "Adelie")
+nrow(df1)
+mean(df1$body_mass_g, na.rm = TRUE)
+median(df1$body_mass_g, na.rm = TRUE)
+sd(df1$body_mass_g, na.rm = TRUE)
+
+df2 <- filter(penguins, species == "Chinstrap")
+nrow(df2)
+mean(df2$body_mass_g, na.rm = TRUE)
+median(df2$body_mass_g, na.rm = TRUE)
+sd(df2$body_mass_g, na.rm = TRUE)    
+
+df3 <- filter(penguins, species == "Gentoo")
+nrow(df3)
+mean(df3$body_mass_g, na.rm = TRUE)
+median(df3$body_mass_g, na.rm = TRUE)
+sd(df3$body_mass_g, na.rm = TRUE)
+```
+
+## Example 5 - dplyr and ggplot practice in R
+#### Example 5 Part a
+```{r}
+#Calculate medical charges by region for smokers over 40
+```
+
+```{r}
+#Create data frames required for the plot
+```
+
+```{r}
+#Create visualization
+```
+
+#### Example 5 Part b
+```{r}
+#create obesity variable
+Ins <-
+  L2_insurance_dataset %>%
+    mutate(obese = ifelse(bmi >= 30, "Yes", "No"))
+
+# create a second smoking smoking status variable for labels
+Ins1 <-
+  Ins %>%
+  mutate(smokerLabels = ifelse(smoker == "yes", "Smoker", "Non-Smoker"))
+
+#create the plot
+ggplot(data = Ins1, mapping = aes(x = obese, y = charges)) +
+  geom_boxplot() +
+  facet_grid(.~smokerLabels) +
+  labs(x = "Obesity Status", y = "Charges", title = "Charges by Obesity and Smoking Status")
+```
+
+For non-smokers, the obesity status has little impact on charges. For smokers, obese patients have higher charges. For smokers, charges tend to be higher given the obesity status is fixed. 
+
+## Example 6 - A note about masking
+
+
+#### Example 6c
+Add `Hmisc` library to front matter. Then run the code provided below.
+
+```{r}
+penguins %>%
+  group_by(species) %>%
+  summarize(N = n(), 
+            MedBodyMass = median(body_mass_g, na.rm = TRUE),
+            StdDevBodyMass = sd(body_mass_g, na.rm = TRUE))
+```
+
+

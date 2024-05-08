@@ -1,0 +1,174 @@
+---
+title: "Lecture 11 - kNN Classification"
+output: html_document
+date: "March 11, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+remove(list = ls())
+library(tidyverse)
+library(palmerpenguins)
+library(FNN)
+```
+
+## Example 2a - Remove NA's and perform training/validation split
+```{r}
+#Create object named penguins in Environment; Requires palmerpenguins package
+data("penguins")
+
+#Omit NA's
+penguins <- na.omit(penguins)
+
+#Train/Validation split (90/10, 321)
+set.seed(321)
+trainInd <- sample(1:nrow(penguins), floor(0.9*nrow(penguins)))
+set.seed(NULL)
+
+Train <- penguins[trainInd, ]
+Validation <- penguins[-trainInd, ]
+```
+
+
+## Example 2b - Recreate plot
+```{r}
+ggplot(data = Train, mapping = aes(x = bill_length_mm,
+                                   y = bill_depth_mm,
+                                   color = species)) +
+  geom_point() +
+  geom_point(data = Validation[1 , ], color = "black", size = 2) +
+  labs(x = "Bill Length (in mm)",
+       y = "Bill Depth (in mm)")
+```
+
+## Example 2c - Recreate plot using 22nd Validation Point
+```{r}
+ggplot(data = Train, mapping = aes(x = bill_length_mm,
+                                   y = bill_depth_mm,
+                                   color = species)) +
+  geom_point() +
+  geom_point(data = Validation[22 , ], color = "black", size = 2) +
+  labs(x = "Bill Length (in mm)",
+       y = "Bill Depth (in mm)")
+```
+
+## Example 2d - Recreate plot using 27nd Validation Point
+```{r}
+ggplot(data = Train, mapping = aes(x = bill_length_mm,
+                                   y = bill_depth_mm,
+                                   color = species)) +
+  geom_point() +
+  geom_point(data = Validation[27 , ], color = "black", size = 2) +
+  labs(x = "Bill Length (in mm)",
+       y = "Bill Depth (in mm)")
+```
+
+## Example 2e - Prepping data
+```{r}
+#Create an object called penguins in my environment
+data("penguins")
+
+#Omit NA's
+penguins <- na.omit(penguins)
+
+#Scale Data
+xvars <- c("bill_length_mm", "bill_depth_mm")
+penguins[ , xvars] <- scale(penguins[ , xvars], center = TRUE, scale = TRUE)
+
+# Train/Validation split
+set.seed(321)
+trainInd <- sample(1:nrow(penguins), floor(0.9*nrow(penguins)))
+set.seed(NULL)
+
+Train <- penguins[trainInd, ]
+Validation <- penguins[-trainInd, ]
+
+#Build kNN classification model
+knn_res <- knn(train = Train[ , xvars, drop = FALSE],
+               test = Validation[ , xvars, drop = FALSE],
+               cl = Train$species,
+               k = 3)
+
+#Access Predictions
+knn_res #In general, do NOT include this in your code; 
+```
+
+## Example 2f - Adding predictions to the Validation set
+```{r}
+#Add predictions to the Validation set
+Validation <- 
+  Validation %>%
+  mutate(pred_species = knn_res)
+```
+
+## Example 2g
+```{r}
+Validation[c(1, 22, 27), ] %>%
+  select(species, pred_species)
+```
+
+## Example 4a - Creating a confusion matrix
+```{r}
+#Confusion Matrix - Assumes you've added predictions to Validation
+table(Validation$pred_species, Validation$species)
+
+#If predictions are not in Validation, use: table(knn_res, Validation$species)
+```
+
+## Activity 5
+```{r}
+#Training/Validation split
+set.seed(315)
+trainInd <- sample(1:nrow(penguins), floor(0.85 * nrow(penguins)))
+set.seed(NULL)
+
+Train <- penguins[trainInd, ]
+Validation <- penguins[-trainInd, ]
+
+#Initialize
+maxK <- 75
+accuracyVec <- rep(NA, maxK)
+
+#Loop
+for(i in 1:maxK){
+  #Build Model
+  knnRes <- knn(train = Train[ , xvars, drop = FALSE],
+                   test = Validation[ , xvars, drop = FALSE],
+                   cl = Train$species,
+                   k = i)
+  
+  #Accuracy
+  accuracyVec[i] <-
+    mean(knnRes == Validation$species)
+  
+}
+
+# Create data frame for plotting
+tempDF <- data.frame(k = 1:maxK, accuracy = accuracyVec)
+
+# Plot accuracy vs. k
+library(ggplot2)
+ggplot(data = tempDF, aes(x = k, y = accuracy)) +
+  geom_line() +
+  labs(y = "Accuracy", x = "Number of Nearest Neighbors (k)")
+
+#Showing the maximum accuracy
+accuracyVec[which.max(accuracyVec)]
+
+# Display all k values that have a maximum accuracy
+tempDF1 <- 
+  tempDF %>%
+  filter(accuracy == accuracyVec[which.max(accuracyVec)]) %>%
+  select(k)
+
+tempDF1
+
+```
+
+
+There are multiple optimal k values I would choose including: 7, 19, 20, 21, 25, 27, 28, 29, and 31. I found these values but finding the maximum y-values of the temporary model. Unlike MSE and RMSE models where we want the mean standard error or the square root mean standard error to be as low as possible to minimize errors, we want the accuracy (y-value) of our model to be as high as possible. 
+

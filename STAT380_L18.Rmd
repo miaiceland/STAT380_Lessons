@@ -1,0 +1,128 @@
+---
+title: "STAT 380 Lecture 18 Decisions Trees Part 3"
+output: html_document
+date: "April 12, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+#Remove all objects from Environment
+remove(list = ls())
+
+#Load packages
+library(tidyverse)
+library(rpart) #For regression and classification trees
+library(rattle) #For nice visualization of trees
+
+#Read in Dataset
+titanic <- read.csv("L12_titanic3.csv")
+```
+
+
+## Prepare Data
+```{r}
+#Perform Training/Validation Split
+set.seed(123)
+trainInd <- sample(1:nrow(titanic), floor(0.85*nrow(titanic)))
+set.seed(NULL)
+
+#Create Train and Validations
+Train <- titanic[trainInd, ]
+Validation <- titanic[-trainInd, ]
+```
+
+## Example -  Pruning the Tree
+#### Part a - Using a complexity parameter (cp) value of 0.001, grow the tree. 
+```{r}
+#Grow the tree and perform 10-fold CV
+set.seed(123)
+fullTree <- rpart(Survived ~ ., data = Train, method = "class", cp = .001, xval = 10)
+set.seed(NULL)
+
+#Display the cptable
+fullTree$cptable
+```
+
+#### Part b - Plot the tree
+```{r}
+fancyRpartPlot(fullTree, cex = 0.7)
+```
+
+#### Part c - Visualize the results of the cross validation procedure. 
+```{r}
+plotcp(fullTree)
+```
+
+#### Part d - What is the optimal value of the complexity parameter based on minimizing the cross validation error? 
+```{r}
+#Determine the row of cptable containing smallest CV error
+cpRow <- which.min(fullTree$cptable[ , "xerror"])
+
+#Determine optimal value of cp 
+cpChoiceMin <- fullTree$cptable[ , "CP"][cpRow]
+
+#Display the choice
+cpChoiceMin
+```
+
+#### Part e - What is the optimal value of the complexity parameter based on the 1se rule?
+```{r}
+#Determine the row of cptable containing smallest CV error
+cpRow <- which.min(fullTree$cptable[ , "xerror"])
+
+#Calculate min(xerror) + xstd
+target <- fullTree$cptable[ , "xerror"][cpRow] +fullTree$cptable[ , "xstd"][cpRow]
+
+#Determine which xerror values are less than target and select first such value
+cpRow1se <- which(fullTree$cptable[ , "xerror"] < target)[1]
+
+cpChoice1se <- fullTree$cptable[ , "CP"][cpRow1se]
+
+#Display the choice
+cpChoice1se
+```
+
+#### Part f - Prune the tree
+```{r}
+#Prune the true
+prunedTree <- prune(fullTree, cp=cpChoice1se)
+
+#View the pruned tree
+fancyRpartPlot(prunedTree, cex=0.65)
+```
+
+#### Part g - Using the pruned tree, find the validation set accuracy
+```{r}
+#Obtain the predicted classes
+prunedPred <- predict(prunedTree, newdata = Validation, type = "class")
+  
+#Calculate the accuracy
+mean(Validation$Survived == prunedPred)
+```
+
+
+## Bootstrap Sample
+A bootstrap sample is a sample of size n taken from a dataset of size n. The sample is selected with replacement. This means that some rows may be selected multiple times, while other rows are not selected at all.
+
+```{r}
+# Create a temporary dataset consisting of 1st 10 rows of titanic
+tempTitanic <- titanic[1:10, ]
+
+# Generate a bootstrap sample
+set.seed(123)
+bootInd <- sample(1:nrow(tempTitanic), nrow(tempTitanic), replace = TRUE)
+set.seed(NULL)
+
+bootInd
+
+bootSample1 <- tempTitanic[bootInd, ]
+
+bootSample1
+```
+
+NOTE: observations 1, 7, and 8 were not selected. We will call these (row 1, 7, 8) the out-of-bag observations. The observations that were selected are called the in-bag observations. 
+

@@ -1,0 +1,119 @@
+---
+title: "STAT 380 Lecture 17 Decisions Trees Part 2"
+output: html_document
+date: "April 8, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+#Remove all objects from Environment
+remove(list = ls())
+
+#Load packages
+library(tidyverse)
+library(rpart) #For regression and classification trees
+library(rattle) #For nice visualization of trees
+
+#Read in Dataset
+titanic <- read.csv("L12_titanic3.csv")
+```
+
+
+## Example 2 - Classification Tree in R Using Titanic Data
+#### Part a - Perform an 85/15 training/validation split using a seed of 123.
+```{r}
+#Perform Training/Validation Split
+set.seed(123)
+trainInd <- sample(1:nrow(titanic), floor(.85*nrow(titanic)))
+set.seed(NULL)
+
+#Create Train Validation Split
+Train <- titanic[trainInd, ]
+Validation <- titanic[-trainInd, ]
+```
+
+#### Part b - Grow the classification tree. What are the first 2 splits?
+```{r}
+#Build the classification tree
+classTree <- rpart(Survived ~ ., data = Train, 
+                   method = "class")
+#If Survived was a 0/1 indicator, convert Survived to a factor to ensure Classification
+#NOTE: method = "anova" was used for a regression tree
+
+#Display a summary of the tree
+summary(classTree) #Generally speaking, do not include this in your markdown
+```
+
+First Split: Sex
+
+Second Split: Pclass using a threshold of 2.5
+
+#### Part c - Create a visualization of the tree. 
+```{r}
+#Visualize the tree (fancyRpartPlot is from the rattle package)
+fancyRpartPlot(classTree, cex = .7)
+```
+
+#### Part e - Predict whether a 35 year-old female passenger who paid 50 for a class 2 ticket will survive 
+```{r}
+predict(classTree, newdata = data.frame(Age = 35, Sex = "female", Fare = 50, Pclass = 2, Siblings = 0, Parch = 0))
+```
+
+NOTE: by default, predict.rpart returns the probabilities associated with each class. If I wanted the predicted class, add `type = "class"` to code.
+
+#### Part f - Obtain predicted probabilities for the validation set
+```{r}
+#Find Predicted Probabilities
+predProb <- predict(classTree, newdata = Validation)
+#Returns a matrix with 1 row per obs in Validation, and 1 column per response class
+
+#View first six probability predictions
+head(predProb)
+```
+
+#### Part g - Obtain predicted classes for the validation set
+```{r}
+#Determine predicted classes
+predSurv <- predict(classTree, newdata = Validation, type = "class")
+
+#Show the first six predictions
+head(predSurv)
+```
+
+NOTE: To obtain predictions for a regression tree, you can omit the `type = ` specification.
+
+
+#### Part h - Obtain Confusion matrix and calculate accuracy
+```{r}
+#Create the confusion Matrix
+table(predSurv, Validation$Survived)
+
+#Calculate accuracy
+mean(Validation$Survived == predSurv)
+```
+
+
+NOTE: For a regression tree, we could use the predicted responses to calculate MSE (or RMSE) for the validation set.
+
+NOTE: For a binary response, we could use the predicted probabilities to generate an ROC curve and/or find AUC.
+
+```{r}
+rocCurve <- pROC::roc(response = Validation$Survived,
+                      predictor = predProb[ ,2],
+                      legacy.axes = TRUE,
+                      print.auc = TRUE, plot = TRUE)
+```
+
+## Example 3
+```{r}
+summary(classTree)
+```
+
+```{r}
+classTree$variable.importance/sum(classTree$variable.importance)
+```
+

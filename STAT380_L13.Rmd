@@ -1,0 +1,118 @@
+---
+title: "Logistic Regression Part 2"
+output: html_document
+date: "March 20, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+remove(list = ls())
+library(tidyverse)
+library(pROC)
+```
+
+## Preliminaries
+```{r}
+#Read in Dataset - change path to location on your computer
+Titanic <- read.csv("L12_titanic3.csv")
+
+#Convert Survived to indicator named SurvivedNum (Yes = 1, No = 0)
+Titanic <-
+  Titanic %>%
+  mutate(SurvivedNum = ifelse(Survived == "Yes", 1, 0))
+
+#Build model with indicator as the response
+model1 <- glm(SurvivedNum ~ Age, family = binomial, data = Titanic)
+
+#Establish threshold
+threshold <- 0.38
+
+#Find predicted probabilities for all in dataset
+pred_prob <- predict(model1, newdata = Titanic, type = "response")
+
+#Predict survival
+pred_surv <- ifelse(pred_prob > threshold, "Yes", "No")
+```
+
+
+## Example 1a 
+```{r}
+#Create confusion matrix - Basic
+table(pred_surv, Titanic$Survived)
+```
+
+## Example 2
+```{r}
+#Using roc function from pROC library to create ROC Curve
+test_roc <- roc(response = Titanic$Survived,
+                predictor = pred_prob,
+                plot = TRUE,
+                print.auc = TRUE,
+                legacy.axes = TRUE)
+
+#extract AUC value
+as.numeric(test_roc$auc)
+```
+
+## Example 3a
+```{r}
+#Train/Validation split
+set.seed(123)
+train_ind <- sample(1:nrow(Titanic), floor(0.8*nrow(Titanic)))
+set.seed(NULL)
+
+Train <- Titanic[train_ind, ]
+Validation <- Titanic[-train_ind, ]
+
+#Build Intercept Only Model. NOTE: ~ 1 tells R that you only want an intercept
+int_only_model <- glm(SurvivedNum ~ 1, family = binomial, data = Train)
+
+#Build model with all potential regressors. 
+#In code below, SurvivedNum ~ . tells R to use all columns in dataset to predict SurvivedNum
+#SurvivedNum ~ . -Survived tells R to use all columns except Survived to predict SurvivedNum
+full_model <- glm(SurvivedNum ~ . -Survived, family = binomial, data = Train)
+
+#Perform backward elimination
+#Have R do it all
+stats::step(object = full_model, 
+            scope = list(lower = int_only_model, upper = full_model),
+            data = Train,
+            direction = "backward")
+```
+
+## Example 3b
+```{r}
+#Train/Validation split
+set.seed(123)
+train_ind <- sample(1:nrow(Titanic), floor(0.8*nrow(Titanic)))
+set.seed(NULL)
+
+Train <- Titanic[train_ind, ]
+Validation <- Titanic[-train_ind, ]
+
+#Build Intercept Only Model. NOTE: ~ 1 tells R that you only want an intercept
+int_only_model <- glm(SurvivedNum ~ 1, family = binomial, data = Train)
+
+#Build model with all potential regressors. 
+#In code below, SurvivedNum ~ . tells R to use all columns in dataset to predict SurvivedNum
+#SurvivedNum ~ . -Survived tells R to use all columns except Survived to predict SurvivedNum
+full_model1 <- glm(SurvivedNum ~ Pclass + Age + Sex + Fare + Siblings, family = binomial, data = Train)
+```
+
+## Example 3c
+```{r}
+#Using roc function from pROC library to create ROC Curve
+test_roc <- roc(response = Titanic$Survived,
+                predictor = pred_prob,
+                plot = TRUE,
+                print.auc = TRUE,
+                legacy.axes = TRUE)
+
+#extract AUC value
+as.numeric(test_roc$auc)
+```
+

@@ -1,0 +1,176 @@
+---
+title: "STAT 380 Lecture 21 - Clustering Part 1"
+output: html_document
+date: "April 22, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+remove(list = ls())
+library(tidyverse)
+library(mvtnorm) #Needed to simulate dataset
+library(factoextra)
+```
+
+## Example - Simulate 2D Dataset
+```{r}
+#Create data frame with true centroids
+true_centroids <- matrix(c(0, 7, 0 ,7, 0, 0, 7, 7), ncol = 2, byrow = FALSE)
+
+#Randomly generate a dataset (requires mvtnorm package for rmvnorm function)
+set.seed(123) #set random number seed so that we all get the the same "random" values
+clust1 <- rmvnorm(8, mean = true_centroids[1, ], sigma = diag(2)) 
+clust2 <- rmvnorm(12, mean = true_centroids[2, ], sigma = diag(2))
+clust3 <- rmvnorm(8, mean = true_centroids[3, ], sigma = diag(2))
+clust4 <- rmvnorm(7, mean = true_centroids[4, ], sigma = diag(2))
+set.seed(NULL)
+
+df <- as.data.frame(rbind(clust1, clust2, clust3, clust4))
+remove(clust1, clust2, clust3, clust4)
+
+#Plot the dataset
+Toy_2DKmeansRraw <-
+  ggplot(data = df, mapping = aes(x = V1, y = V2)) +
+  geom_point(color = "orange") + 
+  geom_point(data = as.data.frame(true_centroids), 
+             color = "black", size = 5, shape = 17)
+
+Toy_2DKmeansRraw
+```
+
+## Example - K-means on Simulated Dataset Using K = 4
+#### Part a
+```{r}
+#Peform k-means clustering
+set.seed(123)
+kmeans_res4 <- kmeans(x = df, centers = 4, iter.max = 10, nstart = 15)
+set.seed(NULL)
+
+#View Results
+kmeans_res4
+```
+
+### Part b - Find the number of observations assigned to each cluster
+```{r}
+
+```
+
+
+### Part c - Compare estimated centroids to true centroids
+```{r}
+#Estimated Centroids
+
+
+#True Centroids (created when simulating data)
+
+```
+
+### Part d - Plot the cluster assignments
+```{r}
+#Create a data frame that has the coordinates and the cluster assignments
+Plotdf <-
+  df %>%
+  mutate(Cluster = kmeans_res4$cluster)
+
+#Create visualization
+gglot(data = Plotdf, mapping = aes(x = V1, y = V2, shape = as.factor(Cluster), color = as.factor(Cluster))) +
+  geom_point()
+```
+
+### Part e - Extract within-cluster variation for each cluster
+```{r}
+#Find WSS (for each component)
+kmeans_res4$withinss
+```
+
+### Part f - Extract total within-cluster variation
+```{r}
+#Find sum of WSS across all components
+kmeans_res4$tot.withinss
+```
+
+## Example - K-means on Simulated Dataset Using K = 3
+### Part a - Perform K-means with K=3 and visualize the result
+```{r}
+set.seed(123)
+kmeans_res3 <- kmeans(x = df, centers = 3, iter.max = 10, nstart = 15) 
+set.seed(NULL)
+
+
+#Create a data frame that has the coordinates and the cluster assignments
+df2 <-
+  df %>%
+  mutate(cluster = kmeans_res3$cluster)
+
+#Create visualization
+ggplot(data = df2, mapping = aes(x = V1, y =V2, 
+                                 color = as.factor(cluster),
+                                 shape = as.factor(cluster))) +
+  geom_point() +
+  labs(color = "Cluster Assignment",
+       shape = "Cluster Assignment")
+
+```
+
+### Part b - Compare Total Within-cluster Variation Values between K=3 and K=4
+```{r}
+#Within-cluster variation (K=4)
+kmeans_res4$withinss
+#Within-cluster variation (K=3)
+kmeans_res3$withinss
+
+#Total Within-cluster Variation (K=4)
+kmeans_res4$tot.withinss
+#Total Within-clustere Variation (K=3)
+kmeans_res3$tot.withinss
+```
+
+
+## Example - Creating Elbow Plot for K-means Using a Function and Picking K
+```{r}
+set.seed(321)
+#Use built in function from factoextra
+fviz_nbclust(x = df, FUNcluster = kmeans, 
+             method = "wss", k.max = 10, 
+             nstart = 15)
+set.seed(NULL)
+```
+
+## Example - Creating Elbow Plot for K-means Using a Loop and Picking K
+```{r}
+#Initialize
+maxK <- 10
+totalWSS_vec <- rep(NA, maxK) #Repeats NA maxK times and stores as vector totalWSS_vec
+
+#Loop for Perfoming K-means for different values of K
+for(i in 1:maxK){
+  #Do k means
+  set.seed(123)
+  temp_kmeans <- kmeans(x = df, centers = i, nstart = 15, iter.max  = 10)
+  set.seed(NULL)
+  
+  #Extra total WSS
+  totalWSS_vec[i] <- temp_kmeans$tot.withinss
+  
+  print(i)
+}
+```
+
+```{r}
+#Create a data frame for plotting
+temp_df <- data.frame(K = 1:maxK, TotalWSS = totalWSS_vec)
+
+#Create Plot 
+ggplot(data = temp_df, mapping = aes(x = K, y = TotalWSS)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "Number of Clusters",
+       y = "Total Within-sum-of-squares") +
+  scale_x_continuous(breaks = 1:10, limits = c(1, 10))
+```
+
+

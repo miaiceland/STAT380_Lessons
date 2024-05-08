@@ -1,0 +1,160 @@
+---
+title: "STAT400 Lecture 8 kNN Regression Part 1"
+output: html_document
+date: "February 14, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+remove(list = ls())
+
+#Add libraries as needed
+library(tidyverse)
+library(FNN) #Use FNN for knn regression
+
+#Read in dataset
+bmd <- read.csv("L08_bmd.csv")
+```
+
+## Plot for Showing why Linear regression can be inflexible
+```{r}
+#Generate data
+set.seed(123)
+x1 <- seq(0,5,.2)
+y1 <- 5 + 1*x1 + rnorm(length(x1), sd =2)
+df1 <- data.frame(x = x1, y = y1, group = "A")
+
+x2 <- seq(5,10,.2)
+#y2 <- 10 + 4*x2 + rnorm(length(x2), sd = 2)
+y2 <- -65 + 30*x2 - 2*x2^2 + rnorm(length(x2), sd = 2)
+df2<- data.frame(x = x2, y = y2, group = "B")
+
+x3 <- seq(10,15,.2)
+y3 <- 20 -3*x3 + rnorm(length(x3), sd = 2)
+df3<- data.frame(x = x3, y = y3, group = "C")
+set.seed(NULL)
+
+#Create data frame for ggplot
+df <- rbind(df1, df2, df3)
+
+#Create plot with single regression line (forcing slope to be same for all x)
+ggplot(data = df, mapping = aes(x=x, y = y)) +
+  geom_point() + 
+  geom_smooth(method = lm, se = FALSE) +
+  labs(title = "Slope is same for all x's")
+
+#Create plot multiple slopes (one per section) - not shown in notes
+ggplot(data = df, mapping = aes(x=x, y = y, shape = group)) +
+  geom_point() + 
+  geom_smooth(method = lm, se = FALSE)
+
+#Build kNN model and Create kNN plot
+xvars <- c("x")
+knn.temp <- knn.reg(train = df[ , xvars, drop = FALSE],   
+                    test = data.frame(x = seq(0, 15, by = 0.2)),
+                    y = df$y,
+                    k = 5) 
+
+ggplot(data = df, mapping = aes(x = x, y = y)) +
+  geom_point() +
+  labs(title = "kNN with k = 5") + 
+  geom_line(data = data.frame(x = seq(0,15,by=0.2), y = knn.temp$pred), color = "blue")
+
+```
+
+## Example 1
+```{r}
+ggplot(data = bmd, mapping = aes(x = age, y = bmd)) +
+  geom_point() +
+  labs(x = "Age",
+       y = "Bone Mineral Density") + 
+  geom_vline(xintercept = 36, color = "red", linetype = "dashed") + 
+  annotate("text", x = 44, y = 1.35, label= "x (age) = 36", color = "red") +
+  annotate("segment", x = 40, y = 1.35, xend = 36, yend = 1.35, color = "red",
+         arrow = arrow(type = "closed", length = unit(0.02, "npc")))
+```
+
+
+## Example 3a - Prepare the data for kNN
+```{r}
+#Create Indicator(s) for Medication
+#First, determine the levels of medication
+
+bmd <-
+  bmd %>%
+  mutate(Anti = ifelse(medication == "Anticonvulsant", 1, 0),
+         Gluc = ifelse(medication == "Glucocorticoids", 1, 0))
+
+#Create indicators - since medication has 3 levels, create 2 indicators
+
+xvars <- c("age", "weight_kg", "Anti", "Gluc")
+bmd[ , xvars] <- 
+  scale(bmd[ , xvars], center = TRUE, scale = TRUE)
+
+#Scale my numeric variables
+
+set.seed(123)
+train_ind <-
+  sample(1:nrow(bmd), floor(.85 * nrow(bmd)))
+set.seed(NULL)
+
+#Training/Validation split
+
+Train <- bmd[train_ind, ]
+Validation <- bmd[-train_ind, ]
+
+```
+
+
+## Example 3b - Build the kNN model, get predictions, and calculate MSE/RMSE
+```{r, eval = FALSE}
+#Build Model
+
+knn_res <- knn.reg(train = Train[ , xvars, drop = FALSE],
+                   test = Validation[ , xvars, drop = FALSE],
+                   y = Train$bmd,
+                   k = 5)
+
+#Get Predictions 
+knn_res$pred
+
+#Find MSE for Validation Set
+mse_knn5 <- mean((Validation$bmd - knn_res$pred)^2)
+mse_knn5
+
+#Find RMSE for Validation Set
+rmse_knn5 <- sqrt(mse_knn5)
+rmse_knn5
+```
+
+## Example 3c
+```{r}
+#Build Model
+
+linModel <-
+  lm(bmd ~ age + weight_kg + Anti + Gluc, data = Train)
+
+#Find predictions for Test set
+
+yhat <- predict(linModel, newdata = Validation)
+
+#Calculation MSE
+mse_reg <- mean((Validation$bmd - yhat)^2)
+mse_reg 
+
+#Calculate RMSE
+rmse_reg <- sqrt(mse_reg)
+rmse_reg
+```
+
+## Example 3d
+```{r, eval = FALSE}
+#Compare RMSE's (or MSE's) - smaller is better
+rmse_knn5
+rmse_reg
+```
+

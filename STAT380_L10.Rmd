@@ -1,0 +1,164 @@
+---
+title: "STAT380 Lecture 10 - Cross Validation "
+output: html_document
+date: "February 26, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+#Clear Objects from Environment
+remove(list = ls())
+
+#Load Libraries
+library(tidyverse)
+library(FNN) #Use FNN for knn regression
+
+#Read Data
+bmd <- read.csv("L08_bmd.csv")
+```
+
+## Example 2 - Preliminaries: prep the data by creating indicators, scaling inputs (copied from L8)
+```{r}
+#Create Indictor(s) for Medication
+bmd <- bmd %>%
+        mutate(Anti = ifelse(medication == "Anticonvulsant", 1, 0),
+               Gluc = ifelse(medication == "Glucocorticoids", 1, 0))
+
+#Scale my numeric variables
+xvars <- c("age", "weight_kg", "Anti", "Gluc")
+bmd[ , xvars] <- scale(bmd[ , xvars], center = TRUE, scale = TRUE)
+```
+
+## Example 2a - Assign fold values
+```{r}
+#Create fold values
+num_folds <- 10
+folds <- cut(x = 1:nrow(bmd), breaks = num_folds, labels = FALSE)
+
+#Do not include this in your code. Just making a point in the notes
+head(folds, 50)
+
+#Do not include this in your code. Just making a point in the notes
+table(folds)
+```
+
+## Example 2b - Permuate (mix up) fold values
+```{r}
+set.seed(123)
+folds <- sample(folds) #randomly permute the fold values
+set.seed(NULL)
+
+#Do not include this in your code. Just making a point in the notes
+folds
+```
+
+## Combining Steps a and b for HW
+```{r}
+#Create fold values
+num_folds <- 10
+folds <- cut(x = 1:nrow(bmd), breaks = num_folds, labels = FALSE)
+
+#Randomly permute fold values
+set.seed(123)
+folds <- sample(folds) #randomly permute the fold values
+set.seed(NULL)
+```
+
+
+## Example 2c - Write the loop
+```{r}
+#Initialize
+mseVec <- rep(NA, num_folds)
+
+#Loop for controlling the folds
+for(i in 1:num_folds){
+  #Training/Validation Split
+  valInd <- which(folds == i)
+  Validation <- bmd[valInd, ]
+  Train <- bmd[-valInd, ]
+
+#Build Model on Train
+tempModel <- lm(bmd ~ age + weight_kg + Anti + Gluc, data = Train)
+
+#Obtain Predictions for Validation Set
+yhat <- predict(tempModel, newdata = Validation)
+
+#Calculate and Store MSE Values
+mseVec[i] <- mean((Validation$bmd - yhat)^2)
+
+}
+
+#Display 10 MSE Values
+mseVec
+```
+
+
+## Example 2d - Find the 10-fold CV MSE
+```{r}
+#Find the MSE value
+mean(mseVec)
+
+#Find the RMSE value
+sqrt(mean(mseVec))
+```
+
+## Example 2e - How many times did we build a regression model during the 10 fold CV process
+10
+
+
+```{r}
+#Create Indictor(s) for Medication
+bmd <- bmd %>%
+        mutate(Anti = ifelse(medication == "Anticonvulsant", 1, 0),
+               Gluc = ifelse(medication == "Glucocorticoids", 1, 0))
+
+#Scale my numeric variables
+xvars <- c("age", "weight_kg", "Anti", "Gluc")
+bmd[ , xvars] <- scale(bmd[ , xvars], center = TRUE, scale = TRUE)
+
+#Create fold values
+num_folds <- 10
+folds <- cut(x = 1:nrow(bmd), breaks = num_folds, labels = FALSE)
+
+#Randomly permute fold values
+set.seed(123)
+folds <- sample(folds) #randomly permute the fold values
+set.seed(NULL)
+
+#Initialize
+mseVec <- rep(NA, num_folds)
+
+#Loop for controlling the folds
+for(i in 1:num_folds){
+  #Training/Validation Split
+  valInd <- which(folds == i)
+  Validation <- bmd[valInd, ]
+  Train <- bmd[-valInd, ]
+
+#Build Model on Train
+tempModel <- lm(bmd ~ age + weight_kg + Anti + Gluc, data = Train)
+
+#Obtain Predictions for Validation Set
+yhat <- predict(tempModel, newdata = Validation)
+
+#Calculate and Store MSE Values
+mseVec[i] <- mean((Validation$bmd - yhat)^2)
+
+}
+
+#Display 10 MSE Values
+mseVec
+
+#Find the MSE value
+mean(mseVec)
+
+#Find the RMSE value
+sqrt(mean(mseVec))
+```
+
+
+

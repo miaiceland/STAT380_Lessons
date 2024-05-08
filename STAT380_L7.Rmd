@@ -1,0 +1,158 @@
+---
+title: "STAT 380 Notes Lecture 7"
+author: Model Assessment Part 1
+output: html_document
+date: "February 11, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter - Clean Environment, Load Libraries, User Defined Functions
+```{r}
+rm(list = ls())
+library(tidyverse)
+#Add libraries as needed
+
+#Read in Dataset - Change path for location of file on YOUR computer
+Ins <- read.csv("L02_Insurance_m.csv")
+```
+
+## Example 1a - Write Function for Counting NA's
+```{r}
+#This function will count the number of NA's in a vector named dat
+countNA <- function(dat){
+  numNA <- sum(is.na(dat))
+  return(numNA)
+}
+```
+
+## Example 1b - Apply function to one column at a time (Inefficient)
+```{r}
+#Apply countNA to each column of Ins
+countNA(dat = Ins$age)
+countNA(dat = Ins$sex)
+countNA(dat = Ins$bmi)
+countNA(dat = Ins$children)
+countNA(dat = Ins$smoker)
+countNA(dat = Ins$region)
+countNA(dat = Ins$charges)
+```
+
+## Example 1b - Apply function to all columns at once (Efficient)
+```{r}
+#This code applies the countNA function to each column (MARGIN =2) to Ins dataset
+apply(X = Ins, MARGIN = 2, FUN = countNA)
+```
+
+## Example 1c - Remove any observation (row) that includes an NA
+```{r}
+#Remove any row that has at least one missing value in any of its columns
+Ins <- 
+  Ins %>%
+  na.omit()
+```
+
+## Example 1d - "Randomly" generating numbers in R
+```{r}
+#Randomly generate 9 numbers from 1 to 20 with replacement
+sample(x = 1:20, size = 9, replace = TRUE) 
+```
+
+## Example 1e - "Randomly" generating numbers in R (Continued)
+```{r}
+#Randomly generate 9 numbers from 1 to 20 using a seed of 1234
+set.seed(1234)
+sample(x = 1:20, size = 9, replace = TRUE) #16  5 12 15  9  5  6 16  4
+set.seed(NULL)
+```
+
+## Example 1f - What is purpose of set.seed(NULL)?
+```{r}
+#Randomly generate 3 numbers from 1 to 20 3 times using a seed of 1234
+set.seed(1234)
+sample(x = 1:20, size = 3, replace = TRUE) #16  5 12 
+sample(x = 1:20, size = 3, replace = TRUE) #15  9  5  
+sample(x = 1:20, size = 3, replace = TRUE) #6 16  4
+set.seed(NULL)
+
+#What does set.seed(NULL) do?
+set.seed(1234)
+sample(x = 1:20, size = 3, replace = TRUE) #16  5 12
+sample(x = 1:20, size = 3, replace = TRUE) #15  9  5
+set.seed(NULL)
+sample(x = 1:20, size = 3, replace = TRUE) #not using a seed (results will be random)
+```
+
+## Example 1g - Perform 80/20 Training/Testing Split
+```{r}
+#Randomly select the row numbers to become part of the train
+set.seed(321)
+train_ind <- sample(x = 1:nrow(Ins), size = floor(0.8*nrow(Ins)))
+set.seed(NULL)
+
+#Create Train and Validation sets
+train <- Ins[train_ind, ]
+validation <- Ins[-train_ind, ]
+```
+
+## Example 1h - Build Model
+```{r}
+#Build Model for Charges based on Age using Train
+model1 <- lm(charges ~ age, data = train)
+summary(model1)
+```
+
+The estimated regression equation is given by:
+
+$$\hat{y}_{i}=3960.19 + 242.67x_{i,age}$$
+## Example 1i - Proportion of Variance
+$R^2 = 0.0774$
+
+## Example 1j - Predictions for Validation
+```{r}
+#Obtain Predictions for Validation data - INCORRECT
+yhat <- predict(model1, data = validation)
+```
+
+NOTE: After running the chunk above, check the length of yhat. yhat has 1069 predictions. This is worrisome because the validation only has 268 observations so I was expecting 268 predictions (or 268 yhat values).
+
+The predict function does not recognize the data = argument and ignores it without telling you. The default for predict to obtain predictions for the dataset used to build the model (here model1). Solution : use newdata = instead of data = 
+
+```{r}
+#Obtain Predictions for Validation data - CORRECT
+yhat <- predict(model1, newdata = validation)
+```
+
+## Example 1k - Describe the order of operations fo calculating MSE
+The MSE is given by:
+
+$$MSE = \frac{1}{n}\sum_{i=1}^n (y_{i} - \hat{y}_{i})^2$$
+
+Steps:
+0. Obtain predictions (yhat)
+1. Find the residuals (y - yhat)
+2. Square the residuals
+3. There is an implied grouping symbol around the summation symbol. For this reason, we next sum the squared residuals
+4. Multiply the sum by (1/n) which is equivalent to dividing by n.
+
+NOTE: Steps 3 and 4 can be combined into one step in which we find the mean of the squared residuals.
+
+## Example 1l - Calculate MSE and RMSE
+```{r}
+#Calculate MSE for model1 using Validation Data/Validation Predictions
+MSEval1 <- mean((validation$charges - yhat)^2)
+MSEval1
+
+#Calculate RMSE
+RMSEVal1 <- sqrt(MSEval1)
+RMSEVal1 #the average error
+```
+
+## Example 1m - Build Models and assess performance
+```{r}
+
+```
+
+

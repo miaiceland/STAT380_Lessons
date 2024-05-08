@@ -1,0 +1,106 @@
+---
+title: "STAT 380 Notes Lecture 3"
+author: Data Wrangling Part 2
+output: html_document
+date: "January 22, 2024 (Snow Day Makeup)"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Front Matter - Clean Environment, Load Libraries, User Defined Functions
+```{r}
+rm(list = ls()) #CAUTION: Removes all objects in your environment
+library(tidyverse)
+library(nycflights13)
+#Add libraries as needed
+```
+
+## Example 2 Part c - Creating Superhero and Publisher Datasets
+```{r}
+#Create superheroes table (requires tibble package)
+superheroes <- tibble::tribble(
+  ~name, ~alignment, ~gender, ~publisher,
+  "Magneto", "bad", "male", "Marvel",
+  "Storm", "good", "female", "Marvel",
+  "Mystique", "bad", "female", "Marvel",
+  "Batman", "good", "male", "DC",
+  "Joker", "bad", "male", "DC",
+  "Catwoman", "bad", "female", "DC",
+  "Hellboy", "good", "male", "Dark Horse Comics"
+)
+
+#Create publishers table
+publishers <- tibble::tribble(
+  ~publisher, ~yr_founded,
+  "DC", 1934,
+  "Marvel", 1939,
+  "Image", 1992
+)
+```
+
+
+## Example 2 Part c - Performing join from 2b
+```{r}
+inner_join(publishers, superheroes)
+```
+
+## Example 2d - 1st join
+```{r}
+publishers %>% left_join(superheroes, by = c("publisher" = "publisher"))
+```
+
+## Example 2d - second join
+```{r}
+publishers %>% inner_join(superheroes, by = c("publisher" = "publisher"))
+```
+
+## Example 2d - third join
+```{r}
+inner_join(publishers, superheroes)
+```
+
+
+## Example 3a
+```{r}
+flights %>%
+  group_by(carrier) %>%
+  summarize(TotalFlights = n(), 
+            MeanArrivalDelay = mean(arr_delay, na.rm = T)) %>%
+  arrange(desc(MeanArrivalDelay))
+```
+
+## Example 3b
+```{r}
+flights %>%
+  group_by(carrier) %>%
+  summarize(TotalFlights = n(), 
+            MeanArrivalDelay = mean(arr_delay, na.rm = T)) %>%
+  arrange(desc(MeanArrivalDelay)) %>%
+  left_join(airlines, by = "carrier", "carrier")
+```
+
+
+## Example 3c
+```{r}
+flights %>%
+  group_by(carrier) %>%
+  summarize(TotalFlights = n(),
+            MeanArrivalDelay = mean(arr_delay, na.rm = TRUE)) %>%
+  arrange(desc(MeanArrivalDelay)) %>% 
+  left_join(airlines, by = c("carrier" = "carrier")) %>%
+  select(name, carrier, TotalFlights, MeanArrivalDelay) %>%
+  knitr::kable(digits = 1, align = "lccc" , 
+               col.names = c("Name", "Carrier", "Number of Flights", "Mean Arrival Delay"))
+```
+
+
+
+
+
+
+
+
+
+
+

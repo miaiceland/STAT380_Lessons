@@ -1,0 +1,175 @@
+---
+title: "STAT 380 Lecture 1 Notes"
+author: Matt Slifko
+date: "January 8, 2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+# put library commands under 'Front Matter'
+# include any commands to read in files. Ex. df <- read.csv()
+library(tidyverse)
+library(palmerpenguins)
+```
+
+## Example 1 (5th bullet point)
+
+Avoid displaying full datasets in your Markdown document because it is difficult to read.
+
+```{r}
+# iris a a built in dataset containing info on a sample of iris flowers
+iris
+```
+
+Instead, use a function (such as head, glimpse (from dplyr), str, etc.) that only shows a preview/summary of the dataset.
+
+```{r}
+#This command displays the first 10 rows of the iris dataset
+head(iris, 10)
+```
+
+
+## Example 2 - Common Visualizations
+
+The following illustrates some common types of plots and the corresponding code. The examples require the `dplyr` and `ggplot2` libraries, both of which are loaded as part of the `tidyverse`. The examples also `penguins` data set from the `palmerpenguins` library.
+
+```{r}
+#Bar Plot
+ggplot(data = penguins, mapping = aes(x = species)) +
+  geom_bar(fill = "white", color = "black") +
+  labs(x = "Species",
+       y = "Number of Penguins",
+       title = "Penguin Species in Palmer Penguins Dataset")
+
+# NOTE: Inside aes(), no y axis is specified. This is because the y axis is not a variable contained in the dataset. In a bar plot, the y axis is the count which is determined by the geom_bar procedure
+```
+
+```{r}
+#Histogram
+ggplot(data = starwars, mapping = aes(x = height)) + 
+  geom_histogram(binwidth = 20, color = "pink", fill = "white") +
+  labs(x = "Height (in Centimeters)",
+       y = "Count",
+       title = "Character Heights in Star Wars")
+
+# NOTE: Inside aes(), no y axis is specified. This is because the y axis is not a variable contained in the dataset. In a histogram, the y axis is the count which is determined by the geom_histogram procedure
+```
+
+```{r}
+#Density Plot
+ggplot(data = starwars, mapping = aes(x = height)) + 
+  geom_density() +
+  labs(x = "Height (in Centimeters)",
+       y = "Density",
+       title = "Character Heights in Star Wars")
+```
+
+```{r}
+#Scatterplot
+ggplot(data = starwars, mapping = aes(x = height, y = mass)) +
+  geom_point(shape = 5) +
+  labs(title = "Weight vs. Height for Characters in Star Wars",
+       x = "Height (in Centimeters)", y = "Weight (in Kilograms)")
+```
+
+```{r}
+#Side by side boxplots
+ggplot(data = penguins, mapping = aes(x = sex, y = body_mass_g)) +
+  geom_boxplot() +
+  labs(title = "Body Mass vs. Sex for Palmer Penguins",
+       x = "Sex of Penguin", 
+       y = "Body Mass (in Grams)")
+```
+
+## Example 3 - Loading and previewing a dataset from a package
+```{r}
+data(penguins) #delete penguins_raw within the environment by typing in the console "remove(penguins_raw)"
+glimpse(penguins)
+```
+
+
+## Example 4 - Layers of ggplot demonstration
+```{r}
+ggplot(data = penguins, mapping = aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) + #adds trend line within the plot
+  labs(x = "Bill Length (in mm)", 
+       y = "Bill Depth (in mm)", 
+       title = "Peguin Bill Depth vs. Bill Length", 
+       caption = "Source: palmerpenguins Package") +
+  geom_point(data = penguins[120, ], size = 3, color = "red", shape = 16) 
+
+# bracket notation: prior to the comma identifies a row, after the comma identifies a column
+
+# geom_smooth(): by default, this does loess smoother with error boundaries (a smooth curve)
+# method = lm (creates a linear model trend),  se = False (removes error boundaries)
+# lm = 'linear model'
+# se = 'standard error'
+```
+There appears to be a weak, negative, linear relationship. As bill length increases, bill depth decreases.
+
+One question we should always ask: what are we missing?
+
+## Example 5 - Using aesthetics
+```{r} 
+ggplot(data = penguins, mapping = aes(x = bill_length_mm, y = bill_depth_mm, color = species, shape = species)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, aes(group = species)) +
+  labs(x = "Bill Length (in mm)", 
+       y = "Bill Depth (in mm)", 
+       title = "Peguin Bill Depth vs. Bill Length", 
+       caption = "Source: palmerpenguins Package",
+       color = "Penguin Species",
+       shape = "Penguin Species")
+```
+Within each species, there is a positive, linear relationship between bill length and bill depth. As bill length increases, so does bill depth. This is the opposite of what we have seen previously when ignoring species. Further, the species are pretty well separated by bill length and bill depth.
+
+## Example 5.5 - Make a mess
+```{r}
+ggplot(data = penguins, mapping = aes(x = bill_length_mm, y = bill_depth_mm, color = species, shape = sex, size = body_mass_g, alpha = flipper_length_mm)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, aes(group = sex)) +
+  labs(x = "Bill Length (in mm)", 
+       y = "Bill Depth (in mm)", 
+       title = "Peguin Bill Depth vs. Bill Length", 
+       caption = "Source: palmerpenguins Package",
+       color = "Penguin Species",
+       shape = "Penguin Species")
+```
+
+## Example 6 - Faceting using two categorical variables
+```{r}
+ggplot(data = penguins, mapping = aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point(shape = 5) +
+  facet_grid(species ~ sex) +
+  labs(x = "Bill Length (in mm)", y = "Bill Depth (in mm)")
+```
+
+## Example 7 - Faceting using one categorical variable
+```{r}
+ggplot(penguins, aes(x = bill_length_mm, y = bill_depth_mm)) + 
+  geom_point(shape = 5) +
+  facet_grid( . ~ species) +
+  labs(x = "Bill Length (in mm)",
+       y = "Bill Depth (in mm)")
+```
+
+## Example 8 - Boxplots
+### Part a - side-by-side boxplots
+```{r}
+ggplot(data = penguins, mapping = aes(x = species, y = body_mass_g)) +
+  geom_boxplot()
+```
+
+### Part b - boxplots with data added
+```{r}
+set.seed(1)
+ggplot(data = penguins, mapping = aes(x = species, y = body_mass_g)) +
+  geom_boxplot() +
+  geom_point(position = "jitter", color = "red")
+```

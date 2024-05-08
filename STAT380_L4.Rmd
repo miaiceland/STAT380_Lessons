@@ -1,0 +1,102 @@
+---
+title: "STAT 380 Notes Lecture 4"
+author: Regression Part 1
+output: html_document
+date: "January 26, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Front Matter - Clean Environment, Load Libraries, User Defined Functions
+```{r}
+#CAUTION: This removes all objects from Environment
+rm(list = ls())
+
+#Add libraries as needed
+library(tidyverse)
+
+#Read in dataset
+L4_vehicles <- read.csv("L04_Vehicles_m.csv", header=FALSE)
+```
+
+## Example 5b - Rename Variables and remove observations with missing values
+```{r}
+Vehicles <-
+  L4_vehicles %>%
+  rename(Price = V1, Miles = V2, Manufacturer = V3, Model = V4) %>%
+  na.omit()
+```
+
+## Example 5c - Which variable is most likely to explain the other?
+
+I would expect miles to explain the price. As such I would treat miles as the explanatory variable and price as the response variable.
+
+## Example 5d - Scatterplot Showing Price as a Function of Miles
+```{r}
+ggplot(data = Vehicles, mapping = aes(x = Miles, y = Price)) +
+  geom_point() +
+  geom_smooth(method = lm, se = T)
+
+#Find correlation between miles and price
+Vehicles %>%
+  summarize(Correlation = cor(y = Price, x = Miles))
+```
+
+NOTE: If we believe one variable explains the other, the convention is to plot the explanatory variable on the horizontal (x) axis.
+
+Observations: In this case, there appears to be a very weak negative linear relationship between miles and price. As miles lincrease, price decreases, but the relationship is week (corr = -0.08)
+
+
+NOTE: The correlation is a number between -1 and +1. The closer the absolute value of the correlation is to 1, the stronger the relationship. When the correlation is close to 0, there is no LINEAR relationship.
+
+## Example 5e - What other variables could be used to help explain the variation in price?
+
+You should always ask this question.
+
+Some other variables:
+- reputation
+- quality of parts used
+- type of vehicle (etc. truck, car, SUV, hybrid, electric)
+- condition
+- accessories
+
+## Example 5f - Is there an association between price, miles, and model? Create an appropriate plot for visualizing this relationship and explain what you have learned by examining the plot.
+```{r}
+ggplot(data = Vehicles, 
+       mapping = aes(x = Miles, y = Price, color = Model, shape = Model)) +
+  geom_point() + 
+  geom_smooth(method = "lm")
+
+Vehicles %>%
+  group_by(Model) %>%
+  summarize(Correlation = cor(x = Miles, y = Price))
+```
+
+Some observations:
+
+- Within each model, there is a negative linear association. As miles increases, price decreases.
+- The rate of change in price with respect to miles (i.e., the slopes) may be different for the different models. It looks like Camry's and Volt's have similar slopes, but the slope for Tacoma's may not be as steep. 
+- For a given number of miles, Tacoma's are more expensive than Camry's and Camry's are more expensive than Volt's.
+
+## 5g - Create new dataset for Camry's only
+```{r}
+Camrys <-
+  Vehicles %>%
+  filter(Model == "Camry")
+  
+```
+
+## 5h - Build Simple Linear Regresssion Model
+```{r}
+#Build the regression model
+reg_res <- lm(Price ~ Miles, data = Camrys) 
+
+#Display a summary of the model
+summary(reg_res)
+```
+
+The estimated regression equation is given by:
+
+$$\hat{y}_{i} = a + bx_{i}$$
+

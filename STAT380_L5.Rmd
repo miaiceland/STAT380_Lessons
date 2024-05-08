@@ -1,0 +1,111 @@
+---
+title: "STAT 380 Notes Lecture 5"
+author: Regression Part 2
+output: html_document
+date: "Feb 2, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter - Clean Environment, Load Libraries, User Defined Functions
+```{r}
+#Remove all objects from Environment
+rm(list = ls())
+
+#Add libraries as needed
+library(tidyverse)
+
+
+#Read in Dataset
+L5_vehicles <- read.csv("L04_Vehicles_m.csv", header=FALSE)
+```
+
+## Preliminaries
+```{r}
+#Add descriptive names
+Vehicles <- 
+  L5_vehicles %>%
+  rename(Price = V1,
+         Miles = V2,
+         Manufacturer = V3,
+         Model = V4)
+```
+
+## Example 1 - Regression Model for Price using Miles and Model
+#### Part a - Defining Indicator Variables (Mathmatically)
+The indicator for Camry is given by:
+
+$$x_{i,Camry} = 
+  \begin{cases} 
+      1 & \text{Model = Camry} \\
+      0 & \text{Model }\ne \text{Camry} 
+   \end{cases}$$
+
+The indicator for Tacoma is given by:
+
+$$x_{i,Tacoma} = 
+  \begin{cases} 
+      1 & \text{Model = Tacoma} \\
+      0 & \text{Model }\ne \text{Tacoma} 
+   \end{cases}$$
+
+#### Part b - Understanding Indicators
+
+|Camry $(x_{i,2})$ | Tacoma $(x_{i,3})$ | Implied Model of Car |
+|:-----:|:-----:|:-----:|
+|1 | 0 | Camry |
+|0 | 1 | Tacoma |
+|0 | 0 | Volt |
+
+NOTE: The value implied when all indicators are 0 is often called the "baseline". In this case, the Volt is the baseline.
+
+#### Part c - Create Indicator Variables and Build Regression Model
+```{r}
+#Create Indicator Variables
+Vehicles <-
+  Vehicles %>%
+  mutate(Camry = ifelse(Model == "Camry", 1, 0),
+         Tacoma = ifelse(Model == "Tacoma", 1, 0))
+
+#Build Regression Model
+model1 <- lm(Price ~ Miles + Camry + Tacoma, data = Vehicles)
+
+#Display the Model
+summary(model1)
+```
+
+
+
+The estimated regression equation is given by:
+
+$$\hat{y}_i = 8.29 - 0.08 x_{i,1} + 10.21 x_{i,2} + 19.88 x_{i,3}$$
+
+#### Example 1e - Calculate Confidence Intervals
+```{r}
+#Estimate the Confidence Intervals for the Regression Coefficients
+confint(model1, level = 0.95)
+```
+
+
+## Example 2a - Additional Considerations
+#### Part a - R Generated Indicators
+```{r}
+#Add the categorical variable to Model directly to the formula instead of the indicators
+model1b <- lm(Price ~ Miles + Model, data = Vehicles)
+summary(model1b)
+```
+
+#### Part b - Too many Indicators
+```{r}
+#Create indicator for 3rd category (we already created Camry and Tacoma)
+Vehicles <-
+  Vehicles %>%
+  mutate(Volt = ifelse(Model == "Volt", 1, 0))
+
+#Add all 3 indicators to the model
+model1c <- lm(Price ~ Miles + Camry + Tacoma + Volt, data = Vehicles)
+summary(model1c)
+```
+

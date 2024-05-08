@@ -1,0 +1,40 @@
+---
+title: "STAT 380 Decisions Trees Part 1"
+output: html_document
+date: "April 5, 2024"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+#Remove all objects from Environment
+remove(list = ls())
+
+#Load packages
+library(tidyverse)
+library(rpart) #For regression and classification trees
+library(rattle) #For nice visualization of trees
+
+#Read in Dataset
+Toy <- read.csv("L16_Toy.csv")
+```
+
+## Example 4
+
+```{r}
+model1 <- rpart(y ~ x,
+                   method = "anova",
+                   data = Toy, minbucket = 3)
+
+fancyRpartPlot(model1, cex =.8)
+
+predict(model1, newdata = Toy, type = "prob")
+```
+
+
+
+
+

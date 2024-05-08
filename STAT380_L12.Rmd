@@ -1,0 +1,128 @@
+---
+title: "STAT 380 Lecture 12 - Logistic Regression Part 1"
+output: html_document
+date: "March 15, 2025"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter
+```{r}
+remove(list = ls())
+
+#Add libraries as needed
+library(tidyverse)
+
+#Read in the Dataset
+#NOTE: Modify the path the folder on your computer holding the dataset
+titanic <- read.csv("L12_titanic3.csv")
+```
+
+
+## Example 3b - Build Model - This code produces error
+```{r, error = TRUE}
+#Build Logistic Regression Model for Predicting Survived Using Age
+model1 <- glm(Survived ~ Age, family = binomial, data = titanic)
+```
+
+
+## Example 3c - Build the model correctly 
+```{r}
+#Convert Survived to indicator named SurvivedNum (Yes = 1, No = 0)
+titanic <-
+  titanic %>%
+  mutate(SurvivedNum = ifelse(Survived == "Yes", 1, 0))
+
+#Build model with indicator as the response
+model1 <-
+  glm(SurvivedNum ~ Age, family = binomial, data = titanic)
+
+#Display summary of model
+summary(model1)
+```
+
+The estimated logit equation is given by:
+
+$$log(\frac{\hat{p}_i}{1-\hat{p}_i})=-0.2092 - 0.0088x_{i,age}$$
+
+The estimated probability form is given by:
+
+$$\hat{p}_i=\frac{e^{-0.2092 - 0.0088x_{i,age}}}{1+e^{-0.2092 - 0.0088x_{i,age}}}$$
+## Example 3d - A second method for fixing error - convert y to a factor
+```{r}
+#Build logistic regression used Survived as a factor
+model1Factor <- glm(as.factor(Survived) ~ Age, family = binomial, data = titanic)
+summary(model1Factor)
+
+#What happens if Survived took values of "Did" and "Did Not"? Do answers change?
+titanic <-
+  titanic %>% mutate(Survived2 = ifelse(Survived == "Yes", "Did", "Did Not"))
+
+model1Factor2 <- glm(as.factor(Survived2) ~ Age, family = binomial, data = titanic)
+summary(model1Factor2)
+```
+
+
+## Example 3e - Checking Levels of a factor
+```{r}
+#levels command reveals the levels of a factor
+levels(as.factor(titanic$Survived))
+levels(as.factor(titanic$Survived2))
+```
+
+
+## Example 3h
+```{r}
+#Prediction for THE LOGIT for a person who is 35
+predict(model1, newdata = data.frame(Age = 35))
+
+#Prediction for the PROBABILITY for a person who is 35
+predict(model1, newdata = data.frame(Age = 35), type = "response")
+```
+
+## Example 3j - Obtain Predicted Probabilities for Dataset 
+```{r}
+#Establish threshold
+threshold <- 0.38
+
+#Find predicted probabilities for all in dataset
+pred_probs <- predict(model1, newdata = titanic, type = "response") #creates an array of predictions for each row (person in this context)
+
+#Predict survival
+pred_surv <- ifelse(pred_probs > threshold, "Yes", "No")
+
+```
+
+
+```{r}
+#Convert Survived to indicator named SurvivedNum (Yes = 1, No = 0)
+titanic <-
+  titanic %>%
+  mutate(SurvivedNum = ifelse(Survived == "Yes", 1, 0))
+
+#Build model with indicator as the response
+model1 <-
+  glm(SurvivedNum ~ Age, family = binomial, data = titanic)
+
+#Display summary of model
+summary(model1)
+
+#levels command reveals the levels of a factor
+levels(as.factor(titanic$Survived))
+
+#Prediction for the PROBABILITY for a person who is 35
+predict(model1, newdata = data.frame(Age = 35), type = "response")
+
+#Establish threshold
+threshold <- 0.38
+
+#Find predicted probabilities for all in dataset
+pred_probs <- predict(model1, newdata = titanic, type = "response") #creates an array of predictions for each row (person in this context)
+
+#Predict survival
+pred_surv <- ifelse(pred_probs > threshold, "Yes", "No")
+
+```
+
